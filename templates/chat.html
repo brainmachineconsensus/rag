@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chatbot</title>
+    <style>
+        :root {
+            --background: #ffffff;
+            --foreground: #000000;
+            --primary: #007bff;
+            --secondary: #f8f9fa;
+            --accent: #e9ecef;
+            --border: #dee2e6;
+            --sidebar-width: 260px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background-color: var(--background);
+            color: var(--foreground);
+            height: 100vh;
+            display: grid;
+            grid-template-columns: var(--sidebar-width) 1fr;
+            grid-template-rows: 1fr auto;
+            grid-template-areas: 
+                "sidebar main"
+                "sidebar footer";
+        }
+
+        .sidebar {
+            grid-area: sidebar;
+            background-color: var(--secondary);
+            border-right: 1px solid var(--border);
+            padding: 1rem;
+            overflow-y: auto;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-bottom: 2rem;
+            color: var(--primary);
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            padding: 0.75rem;
+            margin-bottom: 0.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            color: var(--foreground);
+        }
+
+        .nav-item:hover {
+            background-color: var(--accent);
+        }
+
+        .main-content {
+            grid-area: main;
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        #chat-box {
+            flex-grow: 1;
+            overflow-y: auto;
+            margin-bottom: 1rem;
+        }
+
+        .message {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 10px;
+            max-width: 80%;
+        }
+
+        .user-message {
+            background-color: #d1e7dd;
+            text-align: right;
+            margin-left: auto;
+        }
+
+        .bot-message {
+            background-color: #71e5f46c;
+            text-align: left;
+        }
+
+        .input-container {
+            display: flex;
+            gap: 10px;
+        }
+
+        #user-input {
+            flex-grow: 1;
+            padding: 10px;
+            border: 1px solid var(--border);
+            border-radius: 5px;
+            font-size: 1rem;
+        }
+
+        button {
+            padding: 10px 20px;
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        .footer {
+            grid-area: footer;
+            padding: 1rem;
+            border-top: 1px solid var(--border);
+            text-align: center;
+        }
+
+        @media (max-width: 768px) {
+            body {
+                grid-template-columns: 1fr;
+                grid-template-areas: 
+                    "main"
+                    "footer";
+                height: 95vh;
+            }
+
+            .sidebar {
+                display: none;
+            }
+
+            .main-content {
+                padding: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <aside class="sidebar">
+        <div class="logo">Chatbot</div>
+        <nav>
+            <div class="nav-item">Nouvelle conversation</div>
+            <div class="nav-item">Historique</div>
+            <div class="nav-item">Paramètres</div>
+        </nav>
+    </aside>
+
+    <main class="main-content">
+        <div id="chat-box"></div>
+        <div class="input-container">
+            <input type="text" id="user-input" placeholder="Question sur la lois au Burkina...">
+            <button onclick="sendMessage()">Envoyer</button>
+        </div>
+    </main>
+
+    <script>
+        function sendMessage() {
+            const userInput = document.getElementById("user-input");
+            const message = userInput.value;
+            if (message) {
+                appendMessage("user", message);
+                userInput.value = "";
+
+                fetch("/chatbot/chat/", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                    body: `question=${encodeURIComponent(message)}`
+                })
+                .then(response => response.json())
+                .then(data => typeMessage(data.response))
+                .catch(error => console.error("Error:", error));
+            }
+        }
+
+        function appendMessage(sender, text) {
+            const chatBox = document.getElementById("chat-box");
+            const messageDiv = document.createElement("div");
+            messageDiv.className = "message " + (sender === "user" ? "user-message" : "bot-message");
+            messageDiv.textContent = text;
+            chatBox.appendChild(messageDiv);
+            chatBox.scrollTop = chatBox.scrollHeight;
+            return messageDiv;
+        }
+
+        function typeMessage(text) {
+            const messageDiv = appendMessage("bot", ""); 
+            const typingSpeed = 15;
+            let index = 0;
+
+            function typeNextCharacter() {
+                if (index < text.length) {
+                    messageDiv.textContent += text.charAt(index);
+                    index++;
+                    setTimeout(typeNextCharacter, typingSpeed);
+                }
+            }
+            typeNextCharacter();
+        }
+    </script>
+</body>
+</html>
